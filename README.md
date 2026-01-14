@@ -30,7 +30,3 @@ A simple, responsive web application to browse top-rated anime, watch trailers, 
 
 4.  **Run the app:**
     Simply open `mal_top_10.html` in your web browser.
-
-## Security Warning
-
-This is a client-side application. Your API keys in `config.js` will be visible to anyone who inspects the page source if deployed publicly. Use this project for learning or local development only.
