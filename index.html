@@ -16,15 +16,17 @@
         }
         .gallery-image { transition: transform 0.3s ease; }
         .gallery-image:hover { transform: scale(1.05); }
+        /* Transisi halus untuk modal */
+        #image-modal { transition: opacity 0.3s ease; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen flex flex-col">
 
-    <nav class="bg-indigo-600 text-white py-4 shadow-lg sticky top-0 z-50">
+    <nav class="bg-indigo-600 text-white py-4 shadow-lg sticky top-0 z-40">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <div class="flex items-center space-x-2 cursor-pointer" onclick="showListView()">
                 <span class="text-2xl">🎌</span>
-                <h1 class="text-xl font-bold">MyAnimeList Top 10</h1>
+                <h1 class="text-xl font-bold">Anime Explorer</h1>
             </div>
             <button onclick="showListView()" class="text-indigo-100 hover:text-white text-sm font-semibold">
                 Home / Top 10
@@ -133,6 +135,13 @@
         </div>
     </footer>
 
+    <div id="image-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-95 flex items-center justify-center p-4 cursor-pointer" onclick="closeImageModal()">
+        <div class="relative max-w-7xl max-h-screen w-full h-full flex items-center justify-center">
+            <button class="absolute top-4 right-4 text-white text-5xl font-bold hover:text-gray-300 z-50 focus:outline-none">&times;</button>
+            <img id="modal-image" src="" alt="Full view" class="max-h-[90vh] max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300">
+        </div>
+    </div>
+
     <script>
         // 2. CHECK CONFIG & INITIALIZE KEYS
         let YOUTUBE_API_KEY = '';
@@ -232,6 +241,22 @@
             if(show) el.classList.remove('hidden'); else el.classList.add('hidden');
         }
 
+        // --- NEW: MODAL FUNCTIONS ---
+        function openImageModal(imageUrl) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-image');
+            modalImg.src = imageUrl;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Matikan scroll background
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = ''; // Nyalakan scroll background
+            setTimeout(() => { document.getElementById('modal-image').src = ''; }, 200);
+        }
+
         async function loadAnimeDetails(animeId) {
             showDetailView();
             detailLoading.classList.remove('hidden');
@@ -253,12 +278,12 @@
                 detailContent.classList.remove('hidden');
 
                 let trailerId = getTrailerFromJikan(anime);
-                if (!trailerId && YOUTUBE_API_KEY) { // Check if API Key exists
+                if (!trailerId && YOUTUBE_API_KEY) { 
                     trailerId = await fetchYouTubeTrailer(anime.title);
                 }
                 if (trailerId) renderTrailer(trailerId);
 
-                if (TMDB_API_KEY) { // Check if API Key exists
+                if (TMDB_API_KEY) { 
                     const images = await fetchTMDBImages(anime.title);
                     if (images.length > 0) renderGallery(images);
                 }
@@ -345,13 +370,14 @@
             }
         }
 
+        // --- UPDATED: RENDER GALLERY TO USE MODAL ---
         function renderGallery(images) {
             const gallery = document.getElementById('image-gallery');
             const baseUrl = 'https://image.tmdb.org/t/p/w500';
             const originalUrl = 'https://image.tmdb.org/t/p/original';
             gallery.innerHTML = images.slice(0, 12).map(img => `
                 <div class="gallery-image overflow-hidden rounded-lg shadow-md cursor-pointer aspect-video"
-                     onclick="window.open('${originalUrl}${img.file_path}', '_blank')">
+                     onclick="openImageModal('${originalUrl}${img.file_path}')">
                     <img src="${baseUrl}${img.file_path}" class="w-full h-full object-cover">
                 </div>
             `).join('');
