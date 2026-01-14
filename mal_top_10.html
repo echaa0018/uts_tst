@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jikan Anime Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="config.js"></script>
+
+    <style>
+        .skeleton { animation: skeleton-loading 1s linear infinite alternate; }
+        @keyframes skeleton-loading {
+            0% { background-color: hsl(200, 20%, 80%); }
+            100% { background-color: hsl(200, 20%, 95%); }
+        }
+        .gallery-image { transition: transform 0.3s ease; }
+        .gallery-image:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen flex flex-col">
+
+    <nav class="bg-indigo-600 text-white py-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="showListView()">
+                <span class="text-2xl">🎌</span>
+                <h1 class="text-xl font-bold">Anime Explorer</h1>
+            </div>
+            <button onclick="showListView()" class="text-indigo-100 hover:text-white text-sm font-semibold">
+                Home / Top 10
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-7xl">
+        <div id="config-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Error Konfigurasi!</strong>
+            <span class="block sm:inline">File <code>config.js</code> tidak ditemukan atau API Key belum diset.</span>
+        </div>
+
+        <div id="view-list">
+            <header class="mb-8 text-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-2">Top 10 Anime</h2>
+                <p class="text-slate-600">Highest rated series from Jikan API</p>
+            </header>
+            <div id="list-loading" class="flex flex-col items-center justify-center py-20">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
+                <p class="mt-4 text-gray-700 text-lg font-semibold">Loading top anime...</p>
+            </div>
+            <div id="list-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+                <p class="font-bold">Error!</p>
+                <p id="list-error-message"></p>
+            </div>
+            <div id="anime-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+        </div>
+
+        <div id="view-detail" class="hidden">
+            <button onclick="showListView()" class="mb-6 flex items-center text-indigo-600 hover:text-indigo-800 font-semibold transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Back to List
+            </button>
+            <div id="detail-loading" class="text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+                <p class="mt-4 text-slate-600 text-lg">Loading anime details...</p>
+            </div>
+            <div id="detail-content" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow-lg overflow-hidden sticky top-20">
+                            <img id="dt-poster" src="" alt="Anime Poster" class="w-full h-auto">
+                            <div class="p-6">
+                                <div class="mb-4 text-center">
+                                    <div class="text-5xl font-bold text-blue-600" id="dt-score">N/A</div>
+                                    <div class="text-sm text-slate-500">SCORE</div>
+                                </div>
+                                <div class="space-y-3 border-t pt-4">
+                                    <div class="flex justify-between"><span class="text-slate-600 font-medium">Rank:</span><span id="dt-rank" class="text-slate-800">N/A</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-600 font-medium">Popularity:</span><span id="dt-popularity" class="text-slate-800">N/A</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-600 font-medium">Members:</span><span id="dt-members" class="text-slate-800">N/A</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-600 font-medium">Episodes:</span><span id="dt-episodes" class="text-slate-800">N/A</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-600 font-medium">Status:</span><span id="dt-status" class="text-slate-800">N/A</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white rounded-lg shadow-lg p-6">
+                            <h2 id="dt-title" class="text-3xl font-bold text-slate-800 mb-2">Loading...</h2>
+                            <p id="dt-title-english" class="text-lg text-slate-600 mb-4"></p>
+                            <div class="flex flex-wrap gap-2 mb-4" id="dt-genres"></div>
+                            <div class="text-sm text-slate-500"><span class="font-medium">Aired:</span> <span id="dt-aired">N/A</span></div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow-lg p-6">
+                            <h3 class="text-xl font-bold text-slate-800 mb-4">Synopsis</h3>
+                            <p id="dt-synopsis" class="text-slate-700 leading-relaxed">Loading...</p>
+                        </div>
+                        <div id="section-background" class="bg-white rounded-lg shadow-lg p-6 hidden">
+                            <h3 class="text-xl font-bold text-slate-800 mb-4">Background</h3>
+                            <p id="dt-background" class="text-slate-700 leading-relaxed"></p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow-lg p-6">
+                            <h3 class="text-xl font-bold text-slate-800 mb-4">Production</h3>
+                            <div class="space-y-2">
+                                <div><span class="font-medium text-slate-600">Studios:</span><span id="dt-studios" class="text-slate-800 ml-2">N/A</span></div>
+                                <div><span class="font-medium text-slate-600">Producers:</span><span id="dt-producers" class="text-slate-800 ml-2">N/A</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="section-trailer" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4">Official Trailer</h3>
+                    <div class="aspect-w-16 aspect-h-9 bg-gray-900 rounded-lg overflow-hidden relative" style="padding-bottom: 56.25%; height: 0;">
+                        <iframe id="youtube-trailer" class="absolute top-0 left-0 w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                </div>
+                <div id="section-gallery" class="bg-white rounded-lg shadow-lg p-6 hidden">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4">Image Gallery (TMDB)</h3>
+                    <div id="image-gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+                </div>
+            </div>
+            <div id="detail-error" class="hidden text-center py-20">
+                <div class="text-red-500 text-6xl mb-4">⚠️</div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Failed to Load Anime Details</h2>
+                <p class="text-slate-600">Please try again later.</p>
+            </div>
+        </div>
+    </main>
+    <footer class="bg-gray-800 text-white py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm mb-2">Data provided by <a href="https://jikan.moe/" target="_blank" class="text-indigo-400 hover:underline">Jikan API</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // 2. CHECK CONFIG & INITIALIZE KEYS
+        let YOUTUBE_API_KEY = '';
+        let TMDB_API_KEY = '';
+
+        if (typeof CONFIG !== 'undefined') {
+            YOUTUBE_API_KEY = CONFIG.YOUTUBE_API_KEY;
+            TMDB_API_KEY = CONFIG.TMDB_API_KEY;
+        } else {
+            document.getElementById('config-error').classList.remove('hidden');
+            console.error('CONFIG is not defined. Make sure config.js is loaded.');
+        }
+        
+        // State Variables
+        let currentAnimeTitle = '';
+
+        // Navigation Logic
+        const viewList = document.getElementById('view-list');
+        const viewDetail = document.getElementById('view-detail');
+
+        function showListView() {
+            viewDetail.classList.add('hidden');
+            viewList.classList.remove('hidden');
+            const iframe = document.getElementById('youtube-trailer');
+            iframe.src = '';
+            window.scrollTo(0, 0);
+        }
+
+        function showDetailView() {
+            viewList.classList.add('hidden');
+            viewDetail.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // List View Logic
+        const listLoading = document.getElementById('list-loading');
+        const listError = document.getElementById('list-error');
+        const animeGrid = document.getElementById('anime-grid');
+
+        async function fetchTopAnime() {
+            try {
+                const response = await fetch('https://api.jikan.moe/v4/top/anime?limit=10');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                displayAnimeGrid(data.data);
+                listLoading.classList.add('hidden');
+                animeGrid.classList.remove('hidden');
+            } catch (error) {
+                console.error('List Fetch Error:', error);
+                document.getElementById('list-error-message').textContent = error.message;
+                listLoading.classList.add('hidden');
+                listError.classList.remove('hidden');
+            }
+        }
+
+        function displayAnimeGrid(animeList) {
+            animeGrid.innerHTML = '';
+            animeList.forEach((anime, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-2xl flex flex-col';
+                const title = anime.title || 'Unknown Title';
+                const imageUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
+                
+                card.innerHTML = `
+                    <div class="relative">
+                        <div class="absolute top-2 left-2 bg-indigo-600 text-white font-bold rounded-full w-10 h-10 flex items-center justify-center text-lg shadow-lg z-10">${index + 1}</div>
+                        <img src="${imageUrl}" alt="${title}" class="w-full h-80 object-cover">
+                    </div>
+                    <div class="p-4 flex-grow flex flex-col">
+                        <h2 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2 min-h-[3.5rem]" title="${title}">${title}</h2>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div class="flex items-center"><span class="text-gray-600 text-sm font-semibold">Type:</span><span class="ml-2 text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded">${anime.type || 'N/A'}</span></div>
+                            <div class="flex items-center"><span class="text-gray-600 text-sm font-semibold">Score:</span><span class="ml-2 text-sm bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">⭐ ${anime.score || 'N/A'}</span></div>
+                        </div>
+                        <p class="text-gray-600 text-sm line-clamp-3 mb-4 flex-grow">${anime.synopsis || 'No description available.'}</p>
+                        <button onclick="loadAnimeDetails(${anime.mal_id})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-300 mt-auto">
+                            View Details
+                        </button>
+                    </div>
+                `;
+                animeGrid.appendChild(card);
+            });
+        }
+
+        // Detail View Logic & Helpers
+        const detailLoading = document.getElementById('detail-loading');
+        const detailContent = document.getElementById('detail-content');
+        const detailError = document.getElementById('detail-error');
+
+        function formatNumber(num) { return num ? num.toLocaleString() : 'N/A'; }
+        function setText(id, text) { 
+            const el = document.getElementById(id); 
+            if(el) el.textContent = text || 'N/A'; 
+        }
+        function toggleSection(id, show) {
+            const el = document.getElementById(id);
+            if(show) el.classList.remove('hidden'); else el.classList.add('hidden');
+        }
+
+        async function loadAnimeDetails(animeId) {
+            showDetailView();
+            detailLoading.classList.remove('hidden');
+            detailContent.classList.add('hidden');
+            detailError.classList.add('hidden');
+            toggleSection('section-trailer', false);
+            toggleSection('section-gallery', false);
+            toggleSection('section-background', false);
+
+            try {
+                const response = await fetch(`https://api.jikan.moe/v4/anime/${animeId}`);
+                if (!response.ok) throw new Error('Failed to fetch anime data');
+                const json = await response.json();
+                const anime = json.data;
+                currentAnimeTitle = anime.title;
+
+                renderAnimeInfo(anime);
+                detailLoading.classList.add('hidden');
+                detailContent.classList.remove('hidden');
+
+                let trailerId = getTrailerFromJikan(anime);
+                if (!trailerId && YOUTUBE_API_KEY) { // Check if API Key exists
+                    trailerId = await fetchYouTubeTrailer(anime.title);
+                }
+                if (trailerId) renderTrailer(trailerId);
+
+                if (TMDB_API_KEY) { // Check if API Key exists
+                    const images = await fetchTMDBImages(anime.title);
+                    if (images.length > 0) renderGallery(images);
+                }
+
+            } catch (error) {
+                console.error('Detail Load Error:', error);
+                detailLoading.classList.add('hidden');
+                detailError.classList.remove('hidden');
+            }
+        }
+
+        function renderAnimeInfo(anime) {
+            setText('dt-title', anime.title);
+            setText('dt-title-english', anime.title_english || anime.title_japanese);
+            const poster = document.getElementById('dt-poster');
+            if (anime.images?.jpg) {
+                poster.src = anime.images.jpg.large_image_url || anime.images.jpg.image_url;
+            }
+            setText('dt-score', anime.score);
+            setText('dt-rank', anime.rank ? `#${anime.rank}` : 'N/A');
+            setText('dt-popularity', anime.popularity ? `#${anime.popularity}` : 'N/A');
+            setText('dt-members', formatNumber(anime.members));
+            setText('dt-episodes', anime.episodes);
+            setText('dt-status', anime.status);
+            const genreContainer = document.getElementById('dt-genres');
+            genreContainer.innerHTML = (anime.genres || []).map(g => 
+                `<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">${g.name}</span>`
+            ).join('');
+            setText('dt-aired', anime.aired?.string);
+            setText('dt-synopsis', anime.synopsis);
+            if (anime.background) {
+                setText('dt-background', anime.background);
+                toggleSection('section-background', true);
+            }
+            setText('dt-studios', (anime.studios || []).map(s => s.name).join(', '));
+            setText('dt-producers', (anime.producers || []).map(p => p.name).join(', '));
+        }
+
+        function getTrailerFromJikan(anime) {
+            if (anime.trailer?.youtube_id) return anime.trailer.youtube_id;
+            if (anime.trailer?.url) {
+                const match = anime.trailer.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        async function fetchYouTubeTrailer(title) {
+            try {
+                const query = encodeURIComponent(`${title} official trailer`);
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&videoEmbeddable=true&maxResults=1&key=${YOUTUBE_API_KEY}`;
+                const response = await fetch(url);
+                if (!response.ok) return null;
+                const data = await response.json();
+                return data.items?.[0]?.id?.videoId || null;
+            } catch (e) {
+                console.error('YouTube API Error:', e);
+                return null;
+            }
+        }
+
+        function renderTrailer(videoId) {
+            const iframe = document.getElementById('youtube-trailer');
+            iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}`;
+            toggleSection('section-trailer', true);
+        }
+
+        async function fetchTMDBImages(title) {
+            try {
+                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(title)}&api_key=${TMDB_API_KEY}`);
+                if (!searchRes.ok) return [];
+                const searchData = await searchRes.json();
+                if (searchData.results?.length > 0) {
+                    const item = searchData.results[0];
+                    const imgRes = await fetch(`https://api.themoviedb.org/3/${item.media_type}/${item.id}/images?api_key=${TMDB_API_KEY}`);
+                    if (!imgRes.ok) return [];
+                    const imgData = await imgRes.json();
+                    return imgData.backdrops || [];
+                }
+                return [];
+            } catch (e) {
+                console.error('TMDB API Error:', e);
+                return [];
+            }
+        }
+
+        function renderGallery(images) {
+            const gallery = document.getElementById('image-gallery');
+            const baseUrl = 'https://image.tmdb.org/t/p/w500';
+            const originalUrl = 'https://image.tmdb.org/t/p/original';
+            gallery.innerHTML = images.slice(0, 12).map(img => `
+                <div class="gallery-image overflow-hidden rounded-lg shadow-md cursor-pointer aspect-video"
+                     onclick="window.open('${originalUrl}${img.file_path}', '_blank')">
+                    <img src="${baseUrl}${img.file_path}" class="w-full h-full object-cover">
+                </div>
+            `).join('');
+            toggleSection('section-gallery', true);
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', fetchTopAnime);
+    </script>
+</body>
+</html>
